@@ -1,20 +1,17 @@
 package com.face.secure.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Service
 public class ContinuousMonitoringService {
 
-    @Autowired
-    private FaceRecognitionService FaceRecognitionService;
+    private final FaceRecognitionService faceRecognitionService;
 
-    
+    public ContinuousMonitoringService(FaceRecognitionService faceRecognitionService) {
+        this.faceRecognitionService = faceRecognitionService;
+    }
 
     private int timePassed = 0;
 
@@ -32,7 +29,7 @@ public class ContinuousMonitoringService {
                 public void run() {
                     try {
                         System.out.println("Checking for faces");
-                        if (FaceRecognitionService.detectFaces()) {
+                        if (faceRecognitionService.detectFaces()) {
                             System.out.println("Face detected");
                             timePassed = 0;
                         } else {

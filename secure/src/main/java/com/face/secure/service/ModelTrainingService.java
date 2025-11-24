@@ -1,29 +1,37 @@
 package com.face.secure.service;
 
-import java.io.IOException;
 import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
 import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.face.LBPHFaceRecognizer;
 import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfRect;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
 
-@Service
 public class ModelTrainingService {
     
     private final CascadeClassifier faceDetector;
+    private final File datasetDirectory;
+    private final Path modelPath;
     
-    public ModelTrainingService() throws IOException {
-        String cascadePath = new ClassPathResource("haarcascade_frontalface_default.xml").getFile().getAbsolutePath();
-        this.faceDetector = new CascadeClassifier(cascadePath);
+    public ModelTrainingService() {
+        this(new File("E:/dataset"), Paths.get("E:/face.yml"));
+    }
+
+    public ModelTrainingService(File datasetDirectory, Path modelPath) {
+        this.datasetDirectory = datasetDirectory;
+        this.modelPath = modelPath;
+        this.faceDetector = new CascadeClassifier(resolveCascadePath());
     }
 
     public List<Rect> detectFaces(Mat image) {
@@ -41,8 +49,7 @@ public class ModelTrainingService {
 
     public void trainFaceRecognizer() {
         //AQUI você deve adicionar o seu caminho para o dataset
-        File dataset = new File("E:/dataset");
-        File[] labelDirs = dataset.listFiles(File::isDirectory);
+        File[] labelDirs = datasetDirectory.listFiles(File::isDirectory);
 
         List<Mat> images = new ArrayList<>();
         List<Integer> labels = new ArrayList<>();
@@ -106,17 +113,15 @@ public class ModelTrainingService {
             labelsMat.put(i, 0, labels.get(i));
         }
         faceRecognizer.train(images, labelsMat);
-        faceRecognizer.save("E:/lbph_model.yml");
+        faceRecognizer.save(modelPath.toString());
     }
 
     public void addNewDataToModel() {
         LBPHFaceRecognizer faceRecognizer = LBPHFaceRecognizer.create();
         //AQUI você deve adicionar o seu caminho para o modelo
-        faceRecognizer.read("E:/face.yml");
+        faceRecognizer.read(modelPath.toString());
 
-        //AQUI você deve adicionar o seu caminho para o dataset
-        File dataset = new File("E:/dataset");
-        File[] labelDirs = dataset.listFiles(File::isDirectory);
+        File[] labelDirs = datasetDirectory.listFiles(File::isDirectory);
 
         List<Mat> images = new ArrayList<>();
         List<Integer> labels = new ArrayList<>();
@@ -154,6 +159,18 @@ public class ModelTrainingService {
         faceRecognizer.update(images, labelsMat);
         
         //AQUI você deve adicionar o seu caminho para o modelo
-        faceRecognizer.save("E:/face.yml");
+        faceRecognizer.save(modelPath.toString());
+    }
+
+    private static String resolveCascadePath() {
+        URL resource = ModelTrainingService.class.getClassLoader().getResource("haarcascade_frontalface_default.xml");
+        if (resource == null) {
+            throw new IllegalStateException("Não foi possível localizar o arquivo haarcascade_frontalface_default.xml nos recursos.");
+        }
+        try {
+            return Paths.get(resource.toURI()).toFile().getAbsolutePath();
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Falha ao resolver o caminho do classificador Haar.", e);
+        }
     }
 }

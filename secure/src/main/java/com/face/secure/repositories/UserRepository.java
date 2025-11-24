@@ -1,15 +1,30 @@
 package com.face.secure.repositories;
 
+import java.util.Map;
 import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.face.secure.model.UserModel;
 
-@Repository
-public interface UserRepository extends JpaRepository<UserModel, Long> {
-    Optional<UserModel> findByLabel(int label);
+/**
+ * Simplified in-memory repository implementation so we can run without Spring/JPA.
+ */
+public class UserRepository {
+    private final Map<Long, UserModel> users = new ConcurrentHashMap<>();
+    private final AtomicLong idSequence = new AtomicLong(1);
 
-    
+    public UserModel save(UserModel user) {
+        if (user.getId() == 0) {
+            user.setId(idSequence.getAndIncrement());
+        }
+        users.put(user.getId(), user);
+        return user;
+    }
+
+    public Optional<UserModel> findByLabel(int label) {
+        return users.values().stream()
+                .filter(user -> user.getLabel() == label)
+                .findFirst();
+    }
 }
