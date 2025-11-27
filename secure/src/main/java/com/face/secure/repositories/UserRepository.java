@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.face.secure.model.UserModel;
 
 /**
- * Simplified in-memory repository implementation so we can run without Spring/JPA.
+ * Simplified in-memory repository implementation
  */
 public class UserRepository {
     private final Map<Long, UserModel> users = new ConcurrentHashMap<>();

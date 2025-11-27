@@ -30,7 +30,7 @@ public class FaceRecognitionService {
     private final Path modelPath;
 
     public FaceRecognitionService(UserService userService) {
-        this(userService, Paths.get("E:/face.yml"));
+        this(userService, Paths.get("face.yml"));
     }
 
     public FaceRecognitionService(UserService userService, Path modelPath) {
