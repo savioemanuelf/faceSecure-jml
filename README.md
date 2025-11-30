@@ -41,3 +41,12 @@ java -cp "/usr/share/java/opencv-460.jar:secure/target/classes" \
 -Djava.library.path=/usr/lib/jni \
 com.face.secure.FaceSecureApplication detect
 ```
+
+## Verficação FOrmal (JML)
+Certifique-se de ter o OpenJML baixado. Substitua ~/openjml/openjml pelo caminho onde você instalou a ferramenta.
+```bash
+~/openjml/openjml --esc \
+-cp "/usr/share/java/opencv-460.jar" \
+-sourcepath secure/src/main/java \
+secure/src/main/java/com/face/secure/service/UserService.java > jml_log.txt
+```

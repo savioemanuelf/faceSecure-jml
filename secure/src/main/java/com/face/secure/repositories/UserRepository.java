@@ -1,30 +1,36 @@
 package com.face.secure.repositories;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.face.secure.model.UserModel;
 
-/**
- * Simplified in-memory repository implementation
- */
 public class UserRepository {
-    private final Map<Long, UserModel> users = new ConcurrentHashMap<>();
-    private final AtomicLong idSequence = new AtomicLong(1);
+    
+    private final Map<Long, UserModel> users = new HashMap<>();
+    private long idSequence = 1;
 
+    public UserRepository() {}
+
+    /*@ requires user != null;
+      @ ensures \result == user;
+      @*/
+    //@ skipesc
     public UserModel save(UserModel user) {
         if (user.getId() == 0) {
-            user.setId(idSequence.getAndIncrement());
+            user.setId(idSequence++);
         }
         users.put(user.getId(), user);
         return user;
     }
 
-    public Optional<UserModel> findByLabel(int label) {
-        return users.values().stream()
-                .filter(user -> user.getLabel() == label)
-                .findFirst();
+    /*@ pure @*/
+    //@ skipesc
+    public /*@ nullable @*/ UserModel findByLabel(int label) {
+        for (UserModel user : users.values()) {
+            if (user.getLabel() == label) {
+                return user;
+            }
+        }
+        return null;
     }
 }

@@ -64,7 +64,6 @@ public class FaceRecognitionService {
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String fileName = "E:/frames/debug_frame_" + timestamp + ".png";
 
-        // Salvar o frame como imagem
         Imgcodecs.imwrite(fileName, frame);
         System.out.println("Frame salvo: " + fileName);
     }
@@ -94,12 +93,10 @@ public class FaceRecognitionService {
             if (frame.empty()) {
                 throw new RuntimeException("Captured frame is empty");
             }
-            //saveFrameForDebugging(frame);
             List<Mat> channels = new ArrayList<>();
             Core.split(frame, channels);
             Mat grayFrame = channels.get(0);
             Imgproc.equalizeHist(grayFrame, grayFrame);
-            //saveFrameForDebugging(grayFrame);
             MatOfRect faces = new MatOfRect();
             faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
             
@@ -158,12 +155,10 @@ public class FaceRecognitionService {
             if (frame.empty()) {
                 throw new RuntimeException("Captured frame is empty");
             }
-            //saveFrameForDebugging(frame);
             List<Mat> channels = new ArrayList<>();
             Core.split(frame, channels);
             Mat grayFrame = channels.get(0);
             Imgproc.equalizeHist(grayFrame, grayFrame);
-            //saveFrameForDebugging(grayFrame);
             MatOfRect faces = new MatOfRect();
         faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
             

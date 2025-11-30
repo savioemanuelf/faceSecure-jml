@@ -1,57 +1,43 @@
 package com.face.secure.service;
 
-import java.io.File;
-import java.util.Objects;
-
 import com.face.secure.model.UserModel;
 import com.face.secure.repositories.UserRepository;
 
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final File datasetDirectory;
+    // spec_public permite que o JML verifique invariants sobre este campo
+    private /*@ spec_public @*/ final UserRepository userRepository;
 
+    //@ public invariant userRepository != null;
+
+    /*@ requires userRepository != null;
+      @ ensures this.userRepository == userRepository;
+      @*/
     public UserService(UserRepository userRepository) {
-        this(userRepository, new File("E:/dataset"));
+        this.userRepository = userRepository;
     }
 
-    public UserService(UserRepository userRepository, File datasetDirectory) {
-        this.userRepository = Objects.requireNonNull(userRepository, "userRepository");
-        this.datasetDirectory = datasetDirectory;
-        if(!this.datasetDirectory.exists()) {
-            this.datasetDirectory.mkdirs();
+    /*@ requires true;
+      @ signals (IllegalArgumentException e) user == null;
+      @ ensures user != null ==> \result == user;
+      @ ensures user != null ==> \result.getName().equals(user.getName());
+      @*/
+    public UserModel create(/*@ nullable @*/ UserModel user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
         }
+        return userRepository.save(user);
     }
 
-    public void register(UserModel userModel) {
-        int label = getUnicLabel();
-
-        userModel.setLabel(label);
-        userModel.setName(userModel.getName());
-        userRepository.save(userModel);
-
-        File directory  = new File(datasetDirectory, String.valueOf(label));
-        if(!directory.exists()) {
-            directory.mkdirs();
+    /*@ requires label >= 0;
+      @ ensures \result != null;
+      @*/
+    public /*@ pure @*/ String getNameByLabel(int label) {
+        UserModel user = userRepository.findByLabel(label);
+        
+        if (user != null) {
+            return user.getName();
         }
-    }
-
-    public int getUnicLabel() {
-        File[] labelDirs  = datasetDirectory.listFiles(File::isDirectory);
-
-        int max = 0;
-        if (labelDirs != null) {
-            for(File labelDir : labelDirs) {
-                int label = Integer.parseInt(labelDir.getName());
-                if(label > max) {
-                    max = label;
-                }
-            }
-        }
-        return max + 1;
-    }
-
-    public String getNameByLabel(int label){
-        return userRepository.findByLabel(label).map(UserModel::getName).orElse("Desconhecido");
+        return "Unknown";
     }
 }

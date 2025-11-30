@@ -48,7 +48,6 @@ public class ModelTrainingService {
     }
 
     public void trainFaceRecognizer() {
-        //AQUI você deve adicionar o seu caminho para o dataset
         File[] labelDirs = datasetDirectory.listFiles(File::isDirectory);
 
         List<Mat> images = new ArrayList<>();
@@ -118,7 +117,6 @@ public class ModelTrainingService {
 
     public void addNewDataToModel() {
         LBPHFaceRecognizer faceRecognizer = LBPHFaceRecognizer.create();
-        //AQUI você deve adicionar o seu caminho para o modelo
         faceRecognizer.read(modelPath.toString());
 
         File[] labelDirs = datasetDirectory.listFiles(File::isDirectory);
@@ -158,7 +156,6 @@ public class ModelTrainingService {
 
         faceRecognizer.update(images, labelsMat);
         
-        //AQUI você deve adicionar o seu caminho para o modelo
         faceRecognizer.save(modelPath.toString());
     }
 
