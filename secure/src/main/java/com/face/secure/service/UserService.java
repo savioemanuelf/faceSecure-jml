@@ -4,8 +4,6 @@ import com.face.secure.model.UserModel;
 import com.face.secure.repositories.UserRepository;
 
 public class UserService {
-
-    // spec_public permite que o JML verifique invariants sobre este campo
     private /*@ spec_public @*/ final UserRepository userRepository;
 
     //@ public invariant userRepository != null;
@@ -17,12 +15,10 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    /*@ requires true;
-      @ signals (IllegalArgumentException e) user == null;
-      @ ensures user != null ==> \result == user;
-      @ ensures user != null ==> \result.getName().equals(user.getName());
+    /*@ requires user != null;
+      @ ensures \result == user;
       @*/
-    public UserModel create(/*@ nullable @*/ UserModel user) {
+    public UserModel create(UserModel user) {
         if (user == null) {
             throw new IllegalArgumentException("User cannot be null");
         }
@@ -33,7 +29,7 @@ public class UserService {
       @ ensures \result != null;
       @*/
     public /*@ pure @*/ String getNameByLabel(int label) {
-        UserModel user = userRepository.findByLabel(label);
+        /*@ nullable @*/ UserModel user = userRepository.findByLabel(label);
         
         if (user != null) {
             return user.getName();

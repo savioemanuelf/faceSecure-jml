@@ -12,7 +12,7 @@ public class UserRepository {
     public UserRepository() {}
 
     /*@ requires user != null;
-      @ ensures \result == user;
+      @ ensures \result == user; 
       @*/
     //@ skipesc
     public UserModel save(UserModel user) {
