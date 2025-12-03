@@ -25,7 +25,7 @@ public class ModelTrainingService {
     private final Path modelPath;
     
     public ModelTrainingService() {
-        this(new File("E:/dataset"), Paths.get("E:/face.yml"));
+        this(new File("dataset"), Paths.get("face.yml"));
     }
 
     public ModelTrainingService(File datasetDirectory, Path modelPath) {
