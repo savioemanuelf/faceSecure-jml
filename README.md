@@ -20,6 +20,13 @@ sudo apt install openjdk-21-jdk
 sudo apt install libopencv-dev libopencv-java
 ```
 
+### Preparação do dataset
+Antes de compilar, crie a estrutura de pastas para as fotos de treino. O sistema aceita apenas imagens .png
+```bash
+mkdir -p dataset/1
+```
+Coloque suas fotos `.png`dentro dessa pasta
+
 ## Build:
 Na raiz do projeto, execute o comando abaixo para compilar todos os arquivos .java e gerar os .class na pasta target:
 ```bash
@@ -31,7 +38,15 @@ secure/src/main/java/com/face/secure/dtos/*.java \
 secure/src/main/java/com/face/secure/model/*.java \
 secure/src/main/java/com/face/secure/repositories/*.java \
 secure/src/main/java/com/face/secure/service/*.java \
-secure/src/main/java/com/face/secure/FaceSecureApplication.java
+secure/src/main/java/com/face/secure/*.java
+```
+
+## Treinamento
+Antes de detectar rostos, é necessário gerar o arquivo face.yml a partir do dataset. Execute
+```bash
+java -cp "/usr/share/java/opencv-460.jar:secure/target/classes" \
+-Djava.library.path=/usr/lib/jni \
+com.face.secure.FaceSecureApplication train
 ```
 
 ## RUn:
