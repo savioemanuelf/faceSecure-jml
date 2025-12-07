@@ -25,20 +25,49 @@ import com.face.secure.dtos.DetectFacesDTO;
 
 public class FaceRecognitionService {
 
-    private final UserService userService;
-    private final CascadeClassifier faceDetector;
-    private final Path modelPath;
+    //@ public invariant userService != null;
+    //@ public invariant faceDetector != null;
+    //@ public invariant modelPath != null;
 
+    /*@ spec_public @*/
+    private final UserService userService; /*@ non_null @*/
+    /*@ spec_public @*/
+    private final CascadeClassifier faceDetector; /*@ non_null @*/
+    /*@ spec_public @*/
+    private final Path modelPath; /*@ non_null @*/
+
+    /*@
+      @ public behavior
+      @ requires userService != null;
+      @ ensures this.userService == userService;
+      @ ensures this.modelPath != null;
+      @ signals (Exception e) true;
+      @*/
     public FaceRecognitionService(UserService userService) {
         this(userService, Paths.get("face.yml"));
     }
 
+    /*@
+      @ public normal_behavior
+      @ requires userService != null;
+      @ requires modelPath != null;
+      @ ensures this.userService == userService;
+      @ ensures this.modelPath == modelPath;
+      @ ensures this.faceDetector != null;
+      @ skipesc
+      @*/
     public FaceRecognitionService(UserService userService, Path modelPath) {
         this.userService = Objects.requireNonNull(userService, "userService");
         this.modelPath = modelPath;
         this.faceDetector = new CascadeClassifier(resolveCascadePath());
     }
 
+    /*@
+      @ public normal_behavior
+      @ requires imagePath != null;
+      @ ensures \result != null;
+      @ skipesc
+      @*/
     public String recognize(Path imagePath) {
         LBPHFaceRecognizer faceRecognizer = LBPHFaceRecognizer.create();
         faceRecognizer.read(modelPath.toString());
@@ -50,17 +79,21 @@ public class FaceRecognitionService {
 
             faceRecognizer.predict(testImage, label, confidence);
             String nome = userService.getNameByLabel(label[0]);
-            if(confidence[0] < 30){
-                return "predicao" + nome + "confianca" + confidence[0];
-            }else{
+            if (confidence[0] < 30) {
+                return "predicao" + nome + " confianca " + confidence[0];
+            } else {
                 return "Face não reconhecida." + confidence[0];
             }
         }
         return "Erro ao carregar a imagem de teste.";
     }
 
+    /*@
+      @ private behavior
+      @ requires frame != null;
+      @ skipesc
+      @*/
     private void saveFrameForDebugging(Mat frame) {
-        
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String fileName = "E:/frames/debug_frame_" + timestamp + ".png";
 
@@ -68,68 +101,51 @@ public class FaceRecognitionService {
         System.out.println("Frame salvo: " + fileName);
     }
 
-    public boolean detectFaces() {
-        boolean faceDetected = false;
+    /*@
+      @ public behavior
+      @ assignable \nothing;
+      @ ensures \result == true || \result == false;
+      @ signals (Exception e) true;
+      @*/
+    public /*@ skipesc @*/ boolean detectFaces() {
 
         VideoCapture capture = new VideoCapture(0);
         if (!capture.isOpened()) {
             System.out.println("Erro ao abrir a câmera.");
             return false;
         }
+	Mat frame = new Mat();
+    	capture.read(frame); // Lê apenas UM frame
+    
+    	boolean faceDetected = false;
 
-        LBPHFaceRecognizer faceRecognizer = LBPHFaceRecognizer.create();
-        faceRecognizer.read(modelPath.toString());
+    	if (!frame.empty()) {
+        	List<Mat> channels = new ArrayList<>();
+        	Core.split(frame, channels);
+        	Mat grayFrame = channels.get(0);
+       		Imgproc.equalizeHist(grayFrame, grayFrame);
+        	MatOfRect faces = new MatOfRect();
+        
+        
+        	faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
+        
+        	if (faces.toArray().length > 0) {
+		faceDetected = true; 
+        	}
+    	}
+    
+    	capture.release(); 
+    	return faceDetected;
 
-        Mat frame = new Mat();
-        long timelimit = 59000;
-        long startTime = System.currentTimeMillis();
-        while (true) {
-
-            if (System.currentTimeMillis() - startTime > timelimit) {
-                System.out.println("Time limit.");
-                break;
-            }
-            capture.read(frame);
-            if (frame.empty()) {
-                throw new RuntimeException("Captured frame is empty");
-            }
-            List<Mat> channels = new ArrayList<>();
-            Core.split(frame, channels);
-            Mat grayFrame = channels.get(0);
-            Imgproc.equalizeHist(grayFrame, grayFrame);
-            MatOfRect faces = new MatOfRect();
-            faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
-            
-            for (Rect face : faces.toArray()) {
-                Mat faceROI = new Mat(grayFrame, face);
-                int[] label = new int[1];
-                double[] confidence = new double[1];
-                faceRecognizer.predict(faceROI, label, confidence);
-                String nome = userService.getNameByLabel(label[0]);
-                System.out.println("Predição: " + nome);
-                System.out.println("Confiança: " + confidence[0]);
-                if (confidence[0] < 55) {
-                    System.out.println("Face detectada: " + nome + " - Confidence " + confidence[0]);
-                    faceDetected = true;
-                    break;
-                } else {
-                    System.out.println("Face não reconhecida.");
-                }
-            }
-            if (faceDetected) {
-                break;
-            }
-
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        capture.release();
-        return faceDetected;
     }
 
+    /*@
+      @ public behavior
+      @ requires detectFacesDTO != null;
+      @ ensures \result == detectFacesDTO;
+      @ signals (Exception e) true;
+      @ skipesc
+      @*/
     public DetectFacesDTO detectFaces(DetectFacesDTO detectFacesDTO) {
         boolean faceDetected = false;
 
@@ -145,28 +161,30 @@ public class FaceRecognitionService {
         Mat frame = new Mat();
         long timelimit = 59000;
         long startTime = System.currentTimeMillis();
-        while (true) {
 
+        while (true) {
             if (System.currentTimeMillis() - startTime > timelimit) {
                 System.out.println("Time limit.");
                 break;
             }
             capture.read(frame);
             if (frame.empty()) {
-                throw new RuntimeException("Captured frame is empty");
+                break;
             }
+
             List<Mat> channels = new ArrayList<>();
             Core.split(frame, channels);
+
+            if (channels.isEmpty())
+                break;
+
             Mat grayFrame = channels.get(0);
             Imgproc.equalizeHist(grayFrame, grayFrame);
             MatOfRect faces = new MatOfRect();
-        faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
-            
+            faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
+
             for (Rect face : faces.toArray()) {
-
                 Mat faceROI = new Mat(grayFrame, face);
-                
-
                 int[] label = new int[1];
                 double[] confidence = new double[1];
                 faceRecognizer.predict(faceROI, label, confidence);
@@ -184,6 +202,7 @@ public class FaceRecognitionService {
                     System.out.println("Face não reconhecida.");
                 }
             }
+
             if (faceDetected) {
                 break;
             }
@@ -194,14 +213,24 @@ public class FaceRecognitionService {
                 e.printStackTrace();
             }
         }
+
         capture.release();
         return detectFacesDTO;
     }
 
+    /*@
+      @ private normal_behavior
+      @ ensures \result != null;
+      @ also
+      @ private exceptional_behavior
+      @ signals (IllegalStateException) true;
+      @ skipesc
+      @*/
     private static String resolveCascadePath() {
         URL resource = FaceRecognitionService.class.getClassLoader().getResource("haarcascade_frontalface_default.xml");
         if (resource == null) {
-            throw new IllegalStateException("Não foi possível localizar o arquivo haarcascade_frontalface_default.xml nos recursos.");
+            throw new IllegalStateException(
+                "Não foi possível localizar o arquivo haarcascade_frontalface_default.xml nos recursos.");
         }
         try {
             return Paths.get(resource.toURI()).toFile().getAbsolutePath();

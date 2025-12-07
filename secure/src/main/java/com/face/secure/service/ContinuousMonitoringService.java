@@ -7,67 +7,90 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ContinuousMonitoringService {
 
-    private final FaceRecognitionService faceRecognitionService;
+    //@ public invariant faceRecognitionService != null;
 
+    //@ public invariant timePassed >= 0;
+
+    private final /*@ spec_public non_null @*/ FaceRecognitionService faceRecognitionService;
+
+    /*@ 
+      @ public normal_behavior
+      @   requires faceRecognitionService != null;
+      @   ensures this.faceRecognitionService == faceRecognitionService;
+      @   ensures this.timePassed == 0;
+      @*/
     public ContinuousMonitoringService(FaceRecognitionService faceRecognitionService) {
         this.faceRecognitionService = faceRecognitionService;
     }
 
-    private int timePassed = 0;
+    private /*@ spec_public @*/ int timePassed = 0;
 
-    public boolean startMonitoring(int minutes, int timeLimit) {
-        long timeLimitMin = timeLimit * 60000;
+    /*@ 
+      @ public behavior
+      @   requires true; 
+      @   ensures \result == true || \result == false;
+      @   ensures \result ==> (timePassed == 0); 
+      @   assignable timePassed; 
+      @*/
+    public boolean performCheck() {
+        boolean detected = faceRecognitionService.detectFaces();
+        if (detected) {
+            timePassed = 0;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /*@ 
+      @ public behavior
+      @   requires minutes > 0; 
+      @   requires timeLimit > 0;
+      @   ensures \result == true || \result == false;
+      @*/
+    public /*@ skipesc @*/ boolean startMonitoring(int minutes, int timeLimit) {
+        long timeLimitMin = timeLimit * 60000L;
         long startTime = System.currentTimeMillis();
-        boolean[] stillAllTime = {true};
-        AtomicBoolean stillAllTime2 = new AtomicBoolean(true);
-        
+        AtomicBoolean monitoringActive = new AtomicBoolean(true);
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-        
-
-            Runnable task = new Runnable() {
-                public void run() {
-                    try {
-                        System.out.println("Checking for faces");
-                        if (faceRecognitionService.detectFaces()) {
-                            System.out.println("Face detected");
-                            timePassed = 0;
-                        } else {
-                            scheduler.shutdown();
-                            stillAllTime[0] = false;
-                            stillAllTime2.set(false);
-                            System.out.println("Face not detected");
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        scheduler.shutdown();
-                        stillAllTime[0] = false;
-                        stillAllTime2.set(false);
-                    }
-                }
-            };
-            scheduler.scheduleAtFixedRate(task, 0, minutes, TimeUnit.MINUTES);
-            
-            while(System.currentTimeMillis() - startTime < timeLimitMin){
-                try {
-                    if(stillAllTime2.get()){    
-                        Thread.sleep(1000);
-                        timePassed++;
-                        System.out.println("Time passed: " + timePassed + " seconds");
-                    }else{
-                        scheduler.shutdown();
-                        break;
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+        Runnable task = () -> {
+            try {
+                if (performCheck()) {
+                    System.out.println("Face detected");
+                } else {
+		    System.out.println("Face not detected");
+                    monitoringActive.set(false);
+                    scheduler.shutdown();
+		}
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        scheduler.shutdown();
-        if(stillAllTime2.get()){
-            System.out.println("ta verdade");
-        }else{
-            System.out.println("ta falso");
+        };
+        
+        scheduler.scheduleWithFixedDelay(task, 0, 5, TimeUnit.SECONDS);
+
+	while (System.currentTimeMillis() - startTime < timeLimitMin) {
+            try {
+                if (monitoringActive.get()) {
+                    Thread.sleep(1000);
+                    timePassed++; 
+                    System.out.println("Time passed: " + timePassed + " seconds");
+                } else {
+                    scheduler.shutdown();
+                    break;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
-        return stillAllTime2.get();
+        scheduler.shutdown();
+        
+        if (monitoringActive.get()) {
+            System.out.println("Monitoramento finalizado pelo tempo limite.");
+        } else {
+            System.out.println("Monitoramento interrompido: Nenhuma face detectada.");
+        }
+        return monitoringActive.get();
     }
 }
