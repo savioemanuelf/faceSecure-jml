@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ContinuousMonitoringService {
 
     //@ public invariant faceRecognitionService != null;
-
     //@ public invariant timePassed >= 0;
 
     private final /*@ spec_public non_null @*/ FaceRecognitionService faceRecognitionService;
@@ -31,6 +30,7 @@ public class ContinuousMonitoringService {
       @   ensures \result == true || \result == false;
       @   ensures \result ==> (timePassed == 0); 
       @   assignable timePassed; 
+      @   signals_only java.lang.RuntimeException;
       @*/
     public boolean performCheck() {
         boolean detected = faceRecognitionService.detectFaces();
@@ -47,6 +47,7 @@ public class ContinuousMonitoringService {
       @   requires minutes > 0; 
       @   requires timeLimit > 0;
       @   ensures \result == true || \result == false;
+      @   signals_only java.lang.RuntimeException;
       @*/
     public /*@ skipesc @*/ boolean startMonitoring(int minutes, int timeLimit) {
         long timeLimitMin = timeLimit * 60000L;
@@ -70,6 +71,11 @@ public class ContinuousMonitoringService {
         
         scheduler.scheduleWithFixedDelay(task, 0, 5, TimeUnit.SECONDS);
 
+        /*@
+          @ loop_invariant timePassed >= 0;
+          @ loop_invariant System.currentTimeMillis() >= startTime;
+          @ loop_modifies timePassed;
+          @*/
 	while (System.currentTimeMillis() - startTime < timeLimitMin) {
             try {
                 if (monitoringActive.get()) {

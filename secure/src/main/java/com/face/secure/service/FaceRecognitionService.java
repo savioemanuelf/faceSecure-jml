@@ -29,37 +29,44 @@ public class FaceRecognitionService {
     //@ public invariant faceDetector != null;
     //@ public invariant modelPath != null;
 
-    /*@ spec_public @*/
-    private final UserService userService; /*@ non_null @*/
-    /*@ spec_public @*/
-    private final CascadeClassifier faceDetector; /*@ non_null @*/
-    /*@ spec_public @*/
-    private final Path modelPath; /*@ non_null @*/
+    /*@ spec_public non_null @*/
+    private final UserService userService; 
+    /*@ spec_public non_null @*/
+    private final CascadeClassifier faceDetector; 
+    /*@ spec_public non_null @*/
+    private final Path modelPath; 
+
+    //@ public ghost int attemptCount;
 
     /*@
       @ public behavior
       @ requires userService != null;
       @ ensures this.userService == userService;
       @ ensures this.modelPath != null;
+      @ ensures this.attemptCount == 0;
       @ signals (Exception e) true;
       @*/
     public FaceRecognitionService(UserService userService) {
         this(userService, Paths.get("face.yml"));
+	//@ set attemptCount = 0;
     }
 
     /*@
-      @ public normal_behavior
+      @ public behavior
       @ requires userService != null;
       @ requires modelPath != null;
       @ ensures this.userService == userService;
       @ ensures this.modelPath == modelPath;
       @ ensures this.faceDetector != null;
+      @ ensures this.attemptCount == 0;
+      @ signals (Exception e) true;
       @ skipesc
       @*/
     public FaceRecognitionService(UserService userService, Path modelPath) {
         this.userService = Objects.requireNonNull(userService, "userService");
         this.modelPath = modelPath;
         this.faceDetector = new CascadeClassifier(resolveCascadePath());
+        //@ set attemptCount = 0;
     }
 
     /*@
@@ -143,7 +150,7 @@ public class FaceRecognitionService {
       @ public behavior
       @ requires detectFacesDTO != null;
       @ ensures \result == detectFacesDTO;
-      @ signals (Exception e) true;
+      @ signals_only java.lang.RuntimeException;
       @ skipesc
       @*/
     public DetectFacesDTO detectFaces(DetectFacesDTO detectFacesDTO) {
@@ -162,7 +169,14 @@ public class FaceRecognitionService {
         long timelimit = 59000;
         long startTime = System.currentTimeMillis();
 
+	/*@ 
+          @ loop_invariant System.currentTimeMillis() >= startTime;
+          @ loop_invariant detectFacesDTO != null;
+          @ loop_modifies detectFacesDTO.name, detectFacesDTO.confidence, detectFacesDTO.faceDetected, attemptCount;
+          @*/
         while (true) {
+		//@ set attemptCount = attemptCount + 1;
+
             if (System.currentTimeMillis() - startTime > timelimit) {
                 System.out.println("Time limit.");
                 break;
@@ -183,12 +197,20 @@ public class FaceRecognitionService {
             MatOfRect faces = new MatOfRect();
             faceDetector.detectMultiScale(grayFrame, faces, 1.1, 3, 0, new Size(30, 30), new Size());
 
-            for (Rect face : faces.toArray()) {
+	    Rect[] facesArray = faces.toArray();
+
+            /*@
+              @ loop_invariant k >= 0 && k <= facesArray.length;
+              @ loop_invariant faceDetected ==> detectFacesDTO.faceDetected;
+              @*/
+            for (int k = 0; k < facesArray.length; k++) {
+                Rect face = facesArray[k];
                 Mat faceROI = new Mat(grayFrame, face);
                 int[] label = new int[1];
                 double[] confidence = new double[1];
                 faceRecognizer.predict(faceROI, label, confidence);
                 String nome = userService.getNameByLabel(label[0]);
+
                 System.out.println("Predição: " + nome);
                 System.out.println("Confiança: " + confidence[0]);
                 if (confidence[0] < 55) {

@@ -16,13 +16,16 @@ public class UserModel {
 
     //@ public invariant name != null;
 
+    //@ public constraint \old(id) != 0 ==> id == \old(id);
+
     public UserModel() {
     }
 
     /*@ requires name != null;
-      @ ensures this.name == name; 
-      @    
-      */
+      @ ensures this.name == name;
+      @ ensures this.id == id;
+      @ ensures this.label == label;
+      @*/
     public UserModel(long id, String name, int label) {
         this.id = id;
         this.name = name;
@@ -43,6 +46,10 @@ public class UserModel {
         return id;
     }
 
+    /*@ requires this.id == 0 || id == this.id;
+      @ assignable this.id;
+      @ ensures this.id == id;
+      @*/
     public void setId(long id) {
         this.id = id;
     }
@@ -51,7 +58,11 @@ public class UserModel {
         return name;
     }
 
-    /*@ requires name != null; @*/
+    /*@ 
+      @ requires name != null; 
+      @ assignable this.name;
+      @ ensures this.name == name; 
+      @*/
     public void setName(String name) {
         this.name = name;
     }
